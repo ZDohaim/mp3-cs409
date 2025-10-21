@@ -125,13 +125,26 @@ module.exports = function (router) {
           data: null,
         });
       }
+      //PUT a Task with assignedUser and assignedUserName
+      if (req.body.pendingTasks && Array.isArray(req.body.pendingTasks)) {
+        await Task.updateMany(
+          {
+            _id: { $in: req.body.pendingTasks },
+            completed: false,
+          },
+          {
+            assignedUser: req.params.id,
+            assignedUserName: updatedUser.name,
+          }
+        );
+      }
       res.status(200).json({
-        message: "User updates successfully",
+        message: "User updated successfully",
         data: updatedUser,
       });
     } catch (error) {
       res.status(400).json({
-        messaeg: "error updating user",
+        messaeg: "Error updating user",
         data: error.message,
       });
     }
@@ -146,6 +159,11 @@ module.exports = function (router) {
           data: null,
         });
       }
+      //DELETE a Task should remove the task from its assignedUser's pendingTasks
+      await Task.updateMany(
+        { assignedUser: req.params.id },
+        { assignedUser: "", assignedUserName: "unassigned" }
+      );
       res.status(200).json({
         message: "User deleted successfully",
         data: updatedUser,
@@ -261,6 +279,9 @@ module.exports = function (router) {
   //PUT	Replace entire task with supplied task or 404 error
   taskRoute.put(async (req, res) => {
     try {
+      //add existing task check
+
+      const oldTask = await Task.findById(req.params.id); //get old task for updating
       const updatedTask = await Task.findByIdAndUpdate(
         req.params.id,
         req.body,
@@ -269,8 +290,42 @@ module.exports = function (router) {
           runValidators: true,
         }
       );
-      res.status(201).json({
-        message: "Accepted, replacing task",
+
+      if (!updatedTask) {
+        res.status(404).json({
+          message: "Task not found",
+          data: null,
+        });
+      }
+      if (req.body.hasOwnProperty("assignedUser")) {
+        if (oldTask && oldTask.assignedUser && oldTask.assignedUser !== "") {
+          await User.findByIdAndUpdate(oldTask.assignedUser, {
+            $pull: { pendingTasks: req.params.id },
+          });
+        }
+      }
+      //add task to new user's pending
+      if (
+        updatedTask.assignedUser &&
+        updatedTask.assignedUser !== "" &&
+        !updatedTask.completed
+      ) {
+        await User.findByIdAndUpdate(updatedTask.assignedUser, {
+          $addtoSet: { pendingTasks: updatedTask._id },
+        });
+      }
+      if (
+        req.body.hasOwnProperty("completed") &&
+        updatedTask.completed &&
+        updatedTask.assignedUser
+      ) {
+        await User.findByIdAndUpdate(updatedTask.assignedUser, {
+          $pull: { pendingTasks: req.params.id },
+        });
+      }
+
+      res.status(200).json({
+        message: "Task updated successfully",
         data: updatedTask,
       });
     } catch (error) {
@@ -284,8 +339,20 @@ module.exports = function (router) {
   taskRoute.delete(async (req, res) => {
     try {
       const deleteTask = await Task.findByIdAndDelete(req.params.id);
+      if (!deleteTask) {
+        res.status(404).json({
+          message: "task not found",
+          data: null,
+        });
+
+        if (deleteTask.assignedUser && deleteTask.assignedUser !== "") {
+          await User.findByIdAndUpdate(deleteTask.assignedUser, {
+            $pull: { pendingTasks: req.params.id },
+          });
+        }
+      }
       res.status(200).json({
-        message: "deleted successfully",
+        message: "Task deleted successfully",
         data: "",
       });
     } catch (error) {
