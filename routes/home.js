@@ -12,7 +12,7 @@ module.exports = function (router) {
   var usersRoute = router.route("/users");
 
   //parameters:
-  usersRoute.get("/", async (req, res) => {
+  usersRoute.get(async (req, res) => {
     try {
       const { where, sort, select, skip, limit, count } = req.query;
 
@@ -179,7 +179,7 @@ module.exports = function (router) {
   var tasksRoute = router.route("/tasks");
 
   //GET	Respond with a List of tasks
-  tasksRoute.get("/", async (req, res) => {
+  tasksRoute.get(async (req, res) => {
     try {
       const { where, sort, select, skip, limit, count } = req.query;
 
