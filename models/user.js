@@ -5,26 +5,24 @@ var mongoose = require("mongoose");
 var UserSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, "User name is required."],
+    trim: true,
   },
   email: {
     type: String,
-    required: true,
-    unique: true,
+    required: [true, "User email is required."],
+    lowercase: true,
+    trim: true,
   },
-  pendingTasks: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Task",
-    },
-  ],
+  pendingTasks: {
+    type: [String],
+    default: [],
+  },
   dateCreated: {
     type: Date,
     default: Date.now,
   },
 });
-
-var Task;
 
 // Export the Mongoose model
 module.exports = mongoose.model("User", UserSchema);

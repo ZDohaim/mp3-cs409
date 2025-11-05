@@ -3,16 +3,21 @@ const mongoose = require("mongoose");
 const TaskSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, "Task name is required."],
+    trim: true,
   },
-  decription: {
+  description: {
     type: String,
+    default: "",
+    trim: true,
   },
   deadline: {
     type: Date,
+    required: [true, "Task deadline is required."],
   },
   completed: {
     type: Boolean,
+    default: false,
   },
   assignedUser: {
     type: String,
